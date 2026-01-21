@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Factus Pro | Facturación Inteligente</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+
+    <script>
+        // Protección de ruta: Si no hay token, redirigir al login
+        if(!localStorage.getItem('factus_token')) {
+            window.location.href = 'login.html';
+        }
+    </script>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="sidebar d-flex flex-column justify-content-between">
+    <div>
+        <div class="sidebar-brand">
+            <h4><i class="fa-solid fa-bolt text-warning"></i> Factus<span class="text-primary">Pro</span></h4>
+        </div>
+        <nav>
+            <a onclick="navTo('dashboard')" class="nav-link active" id="nav-dashboard">
+                <i class="fa-solid fa-chart-pie"></i> Dashboard
+            </a>
+            <a onclick="navTo('clientes')" class="nav-link" id="nav-clientes">
+                <i class="fa-solid fa-users"></i> Clientes
+            </a>
+            <a onclick="navTo('productos')" class="nav-link" id="nav-productos">
+                <i class="fa-solid fa-box-open"></i> Productos
+            </a>
+            <a onclick="navTo('facturar')" class="nav-link" id="nav-facturar">
+                <i class="fa-solid fa-file-invoice-dollar"></i> Facturar
+            </a>
+            <a onclick="navTo('nota-credito')" class="nav-link" id="nav-nota-credito">
+                <i class="fa-solid fa-file-circle-minus"></i> Nota Crédito
+            </a>
+        </nav>
+    </div>
+
+    <!-- User Profile & Logout -->
+    <div class="p-3 border-top border-secondary">
+        <div class="d-flex align-items-center text-white mb-3">
+            <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 40px; height: 40px;">
+                <i class="fa-solid fa-user"></i>
+            </div>
+            <div>
+                <small class="d-block text-white-50">Bienvenido,</small>
+                <strong id="userNameDisplay">Admin</strong>
+            </div>
+        </div>
+        <button class="btn btn-outline-danger w-100 btn-sm" onclick="logout()">
+            <i class="fa-solid fa-sign-out-alt me-2"></i> Cerrar Sesión
+        </button>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="main-content">
+
+    <!-- Dashboard -->
+    <div id="dashboard" class="section-content active">
+        <div class="page-header d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="page-title">Resumen General</h2>
+                <p class="text-muted">Bienvenido al panel de control</p>
+            </div>
+            <button class="btn btn-outline-primary" onclick="initDashboard()"><i class="fa-solid fa-sync"></i> Actualizar</button>
+        </div>
+
+        <div class="row g-4 mb-4">
+            <div class="col-md-3">
+                <div class="card stat-card bg-primary text-white h-100">
+                    <div class="card-body">
+                        <h6 class="text-white-50">VENTAS TOTALES</h6>
+                        <h2 class="mb-0 mt-2" id="dashVentas">$0</h2>
+                        <i class="fa-solid fa-dollar-sign icon-bg"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card bg-success text-white h-100">
+                    <div class="card-body">
+                        <h6 class="text-white-50">FACTURAS EMITIDAS</h6>
+                        <h2 class="mb-0 mt-2" id="dashFacturas">0</h2>
+                        <i class="fa-solid fa-file-invoice icon-bg"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card bg-info text-white h-100">
+                    <div class="card-body">
+                        <h6 class="text-white-50">CLIENTES</h6>
+                        <h2 class="mb-0 mt-2" id="dashClientes">0</h2>
+                        <i class="fa-solid fa-users icon-bg"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card bg-secondary text-white h-100">
+                    <div class="card-body">
+                        <h6 class="text-white-50">PRODUCTOS</h6>
+                        <h2 class="mb-0 mt-2" id="dashProductos">0</h2>
+                        <i class="fa-solid fa-box icon-bg"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+            <div class="col-lg-8">
+                <div class="card h-100">
+                    <div class="card-header">Tendencia de Ventas</div>
+                    <div class="card-body">
+                        <canvas id="salesChart" height="100"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card h-100">
+                    <div class="card-header">Últimas Facturas</div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="bg-light"><tr><th>#</th><th>Total</th><th>Estado</th></tr></thead>
+                                <tbody id="recentBillsBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Historial de Facturas -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fa-solid fa-history me-2"></i> Historial de Facturas</span>
+                <div class="input-group w-auto">
+                    <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-search text-muted"></i></span>
+                    <input type="text" class="form-control border-start-0 ps-0" id="searchFacturas" placeholder="Buscar por número o cliente..." onkeyup="filtrarFacturas()">
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="ps-4">Número</th>
+                                <th>Fecha</th>
+                                <th>Cliente</th>
+                                <th>Total</th>
+                                <th class="text-end pe-4">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historialFacturasBody">
+                            <!-- Se llena dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Clientes -->
+    <div id="clientes" class="section-content">
+        <div class="page-header">
+            <h2 class="page-title">Gestión de Clientes</h2>
+            <p class="text-muted">Administra tu base de datos de clientes</p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <div class="card" id="cardClienteForm">
+                    <div class="card-header">
+                        <span id="formClienteTitle"><i class="fa-solid fa-user-plus me-2"></i> Nuevo Cliente</span>
+                        <button class="btn btn-sm btn-light text-danger d-none" id="btnCancelarEdicion" onclick="cancelarEdicionCliente()"><i class="fa-solid fa-times"></i></button>
+                    </div>
+                    <div class="card-body">
+                        <form id="clienteForm">
+                            <div class="mb-3"><label class="form-label">Identificación</label><input type="text" class="form-control" id="cliId" required></div>
+                            <div class="row g-2 mb-3">
+                                <div class="col"><label class="form-label">Nombres</label><input type="text" class="form-control" id="cliNombre" required></div>
+                                <div class="col"><label class="form-label">Apellidos</label><input type="text" class="form-control" id="cliApellido" required></div>
+                            </div>
+                            <div class="mb-3"><label class="form-label">Email</label><input type="email" class="form-control" id="cliEmail" required></div>
+                            <div class="mb-3"><label class="form-label">Teléfono</label><input type="tel" class="form-control" id="cliTelefono"></div>
+                            <div class="mb-3"><label class="form-label">Dirección</label><input type="text" class="form-control" id="cliDireccion"></div>
+
+                            <div class="mb-4">
+                                <label class="form-label">Municipio</label>
+                                <select class="form-select" id="cliMuniId" required>
+                                    <option value="" selected disabled>Seleccione un municipio...</option>
+                                    <!-- Se llena dinámicamente -->
+                                </select>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100" id="btnGuardarCliente">Guardar Cliente</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-8">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <span><i class="fa-solid fa-list me-2"></i> Directorio</span>
+                        <button class="btn btn-sm btn-light text-primary" onclick="cargarClientes()"><i class="fa-solid fa-sync"></i></button>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0 align-middle">
+                                <thead class="bg-light"><tr><th class="ps-4">ID</th><th>Nombre</th><th>Email</th><th class="text-end pe-4">Acción</th></tr></thead>
+                                <tbody id="tablaClientesBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Productos -->
+    <div id="productos" class="section-content">
+        <div class="page-header">
+            <h2 class="page-title">Catálogo de Productos</h2>
+            <p class="text-muted">Define tus productos y servicios</p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <div class="card" id="cardProductoForm">
+                    <div class="card-header">
+                        <span id="formProductoTitle"><i class="fa-solid fa-box me-2"></i> Nuevo Ítem</span>
+                        <button class="btn btn-sm btn-light text-danger d-none" id="btnCancelarEdicionProd" onclick="cancelarEdicionProducto()"><i class="fa-solid fa-times"></i></button>
+                    </div>
+                    <div class="card-body">
+                        <form id="productoForm">
+                            <div class="mb-3"><label class="form-label">Código</label><input type="text" class="form-control" id="prodRef" required></div>
+                            <div class="mb-3"><label class="form-label">Nombre</label><input type="text" class="form-control" id="prodNombre" required></div>
+                            <div class="mb-3"><label class="form-label">Precio</label><input type="number" class="form-control" id="prodPrecio" required></div>
+                            <div class="mb-4"><label class="form-label">Impuesto</label>
+                                <select class="form-select" id="prodTax">
+                                    <option value="19.00">IVA 19%</option>
+                                    <option value="0.00">Exento</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100" id="btnGuardarProducto">Guardar Producto</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-8">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <span><i class="fa-solid fa-boxes-stacked me-2"></i> Inventario</span>
+                        <button class="btn btn-sm btn-light text-primary" onclick="cargarProductos()"><i class="fa-solid fa-sync"></i></button>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0 align-middle">
+                                <thead class="bg-light"><tr><th class="ps-4">Ref</th><th>Nombre</th><th>Precio</th><th>Impuesto</th><th class="text-end pe-4">Acción</th></tr></thead>
+                                <tbody id="tablaProductosBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Facturar -->
+    <div id="facturar" class="section-content">
+        <h3 class="mb-4">Nueva Factura</h3>
+        <div class="card"><div class="card-body">
+            <form id="facturaForm">
+                <!-- Cliente -->
+                <div class="mb-4">
+                    <label class="form-label text-uppercase text-xs fw-bold text-muted mb-2">1. Cliente</label>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="facCliId" placeholder="Buscar Cédula">
+                                <button class="btn btn-outline-secondary" type="button" onclick="buscarCliente('fac')"><i class="fa-solid fa-search"></i></button>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <input type="text" class="form-control bg-light" id="facCliNombre" readonly placeholder="Nombre del Cliente">
+                            <input type="hidden" id="facCliEmail"><input type="hidden" id="facCliDireccion"><input type="hidden" id="facCliTel"><input type="hidden" id="facCliNames"><input type="hidden" id="facCliSurname"><input type="hidden" id="facCliMuni">
+                        </div>
+                    </div>
+                </div>
+                <hr class="my-4 border-light">
+
+                <!-- Producto (Agregar al carrito) -->
+                <div class="mb-4">
+                    <label class="form-label text-uppercase text-xs fw-bold text-muted mb-2">2. Agregar Productos</label>
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label small">Código</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="facProdRef" placeholder="Ref">
+                                <button class="btn btn-outline-secondary" type="button" onclick="buscarProducto('fac')"><i class="fa-solid fa-search"></i></button>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small">Descripción</label>
+                            <input type="text" class="form-control bg-light" id="facProdNombre" readonly>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small">Cant.</label>
+                            <input type="number" class="form-control" id="facCant" value="1" min="1">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small">Precio</label>
+                            <input type="text" class="form-control bg-light" id="facProdPrecio" readonly>
+                            <input type="hidden" id="facProdTax">
+                        </div>
+                        <div class="col-md-1">
+                            <button type="button" class="btn btn-success w-100" onclick="agregarProductoAFactura()"><i class="fa-solid fa-plus"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla de Ítems -->
+                <div class="table-responsive mb-4 border rounded">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="ps-3">Producto</th>
+                                <th class="text-center">Cant.</th>
+                                <th class="text-end">Precio</th>
+                                <th class="text-end">Subtotal</th>
+                                <th class="text-end pe-3"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaItemsFactura">
+                            <tr><td colspan="5" class="text-center text-muted p-3">Agrega productos a la factura</td></tr>
+                        </tbody>
+                        <tfoot class="bg-light fw-bold">
+                            <tr>
+                                <td colspan="3" class="text-end">TOTAL A PAGAR:</td>
+                                <td class="text-end" id="txtTotalFactura">$0</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <hr class="my-4 border-light">
+                <!-- Pago -->
+                <div class="mb-4">
+                    <label class="form-label text-uppercase text-xs fw-bold text-muted mb-2">3. Pago</label>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label small">Rango</label>
+                            <select id="rangoFactura" class="form-select"></select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small">Forma</label>
+                            <select id="facFormaPago" class="form-select" onchange="toggleVencimiento()"></select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small">Medio</label>
+                            <select id="facMedioPago" class="form-select"></select>
+                        </div>
+                        <div class="col-md-4" id="divVencimiento" style="display:none;">
+                            <label class="form-label small">Vencimiento</label>
+                            <input type="date" class="form-control" id="facFechaVence">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small">Observaciones</label>
+                            <textarea class="form-control" id="facObs" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-grid mt-4">
+                    <button type="submit" class="btn btn-primary btn-lg shadow-sm" id="btnFacturar">Emitir Factura</button>
+                </div>
+            </form>
+        </div></div>
+    </div>
+
+    <!-- Nota Crédito -->
+    <div id="nota-credito" class="section-content">
+        <h3 class="mb-4">Nota Crédito</h3>
+        <div class="card"><div class="card-body">
+            <form id="notaForm">
+                <div class="alert alert-light border mb-4">
+                    <h6 class="text-danger mb-3">Factura Original</h6>
+                    <div class="row g-3">
+                        <div class="col-md-3"><label class="form-label small">ID Factus</label><input type="text" class="form-control" id="ncBillId" required></div>
+                        <div class="col-md-3"><label class="form-label small">Número</label><input type="text" class="form-control" id="ncRefNum" required></div>
+                        <div class="col-md-3"><label class="form-label small">Fecha</label><input type="date" class="form-control" id="ncRefDate" required></div>
+                        <div class="col-md-3"><label class="form-label small">Motivo</label><select class="form-select" id="ncConcepto"><option value="1">Devolución</option><option value="2">Anulación</option></select></div>
+                        <div class="col-12"><label class="form-label small">CUFE</label><input type="text" class="form-control" id="ncRefCufe" required></div>
+                    </div>
+                </div>
+                <!-- Cliente -->
+                <div class="mb-4">
+                    <label class="form-label text-uppercase text-xs fw-bold text-muted mb-2">Cliente</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="ncCliId" placeholder="Buscar Cédula">
+                        <button class="btn btn-outline-secondary" type="button" onclick="buscarCliente('nc')"><i class="fa-solid fa-search"></i></button>
+                    </div>
+                    <input type="text" class="form-control mt-2 bg-light" id="ncCliNombre" readonly>
+                    <input type="hidden" id="ncCliEmail"><input type="hidden" id="ncCliDireccion"><input type="hidden" id="ncCliTel"><input type="hidden" id="ncCliNames"><input type="hidden" id="ncCliSurname"><input type="hidden" id="ncCliMuni">
+                </div>
+                <hr class="my-4 border-light">
+                <!-- Producto -->
+                <div class="mb-4">
+                    <label class="form-label text-uppercase text-xs fw-bold text-muted mb-2">Ítem a Devolver</label>
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label small">Código</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="ncProdRef" placeholder="Ref">
+                                <button class="btn btn-outline-secondary" type="button" onclick="buscarProducto('nc')"><i class="fa-solid fa-search"></i></button>
+                            </div>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label small">Descripción</label>
+                            <input type="text" class="form-control bg-light" id="ncProdNombre" readonly>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small">Cant.</label>
+                            <input type="number" class="form-control" id="ncCant" value="1" min="1">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small">Precio</label>
+                            <input type="text" class="form-control bg-light" id="ncProdPrecio" readonly>
+                            <input type="hidden" id="ncProdTax">
+                        </div>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6"><label class="form-label small">Rango</label><select id="rangoNota" class="form-select"></select></div>
+                </div>
+                <div class="d-grid mt-4">
+                    <button type="submit" class="btn btn-danger btn-lg shadow-sm" id="btnNota">Emitir Nota Crédito</button>
+                </div>
+            </form>
+        </div></div>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- Custom JS -->
+<script src="js/app.js"></script>
+
+</body>
+</html>

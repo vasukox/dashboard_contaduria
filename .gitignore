@@ -1,0 +1,18 @@
+# Archivos de configuración del IDE
+.idea/
+*.iml
+*.iws
+
+# Archivos de build de Maven
+target/
+pom.xml.bak
+
+# Archivos de log
+*.log
+
+# Archivo de variables de entorno (¡MUY IMPORTANTE!)
+.env
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db

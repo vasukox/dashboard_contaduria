@@ -1,0 +1,1 @@
+package co.com.tudominio.facturacionfactus.model.domain;
