@@ -17,8 +17,9 @@ RUN mvn package -DskipTests
 
 
 # --- Etapa 2: Ejecución ---
-# Usamos una imagen ligera de OpenJDK 17 para ejecutar la aplicación.
-FROM openjdk:17-jdk-slim
+# Usamos una imagen oficial y ligera de Eclipse Temurin con Java 17 (JRE).
+# Esta es una alternativa más robusta a la anterior.
+FROM eclipse-temurin:17-jre
 
 # Establecemos el directorio de trabajo.
 WORKDIR /app
